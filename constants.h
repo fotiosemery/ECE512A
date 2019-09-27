@@ -12,8 +12,8 @@
 //PWM related
 unsigned int runDC;
 #define DEADTIME    8
-#define PERIOD      400   // 25kHz:320; 20kHz:400
-#define DUTYRATIO   200
+#define PERIOD      160   // 25kHz:320; 20kHz:400
+#define DUTYRATIO   1
 #define MAXTIMECOUNTDC 2000
 
 // State machine and protection related
