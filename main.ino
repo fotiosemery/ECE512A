@@ -67,7 +67,7 @@ void setup() {
             (1 << CS10)   ;
 
   ICR1 = PERIOD;
-  OCR1A = DUTYRATIO;                    // Default Timer 1A duty cycle
+  OCR1A = DUTYRATIO-DEADTIME;                    // Default Timer 1A duty cycle
   OCR1B = DUTYRATIO;                         // Default Timer 1B duty cycle
 
   TIMSK1 = 0;                           // Reset Timer 1 interrupt mask register
