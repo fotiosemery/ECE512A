@@ -13,7 +13,7 @@
 unsigned int runDC;
 #define DEADTIME    8
 #define PERIOD      160   // 25kHz:320; 20kHz:400
-#define DUTYRATIO   34
+#define DUTYRATIO   80
 #define MAXTIMECOUNTDC 2000
 
 // State machine and protection related
