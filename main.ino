@@ -57,7 +57,7 @@ void setup() {
   TCCR1A |= (1 << COM1A1) |             // Clear OC1A on compare match up counting, Set on down counting
             (0 << COM1A0) |
             (1 << COM1B1) |             // Set OC1B on compare match up counting, Clear on down counting
-            (0 << COM1B0) |
+            (1 << COM1B0) |
             (0 << WGM10)  |             // Phase & frequency correct mode, 8-bit TOP = ICR1
             (0 << WGM11)  ;
   TCCR1B |= (0 << WGM12)  |
@@ -67,8 +67,8 @@ void setup() {
             (1 << CS10)   ;
 
   ICR1 = PERIOD;
-  OCR1A = DUTYRATIO-DEADTIME;                    // Default Timer 1A duty cycle
-  OCR1B = DUTYRATIO;                         // Default Timer 1B duty cycle
+  OCR1A = DUTYRATIO;                    // Default Timer 1A duty cycle
+  OCR1B = PERIOD-DUTYRATIO;                         // Default Timer 1B duty cycle
 
   TIMSK1 = 0;                           // Reset Timer 1 interrupt mask register
   TIFR1 = 0;                            // Reset Timer 1 interrupt flag register
