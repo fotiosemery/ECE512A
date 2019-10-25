@@ -23,6 +23,8 @@ void setup() {
   //  ------------------------------------------------------------------------------------------------------
   Run_state = 0;
   runDC = 0;
+  climb = 1;
+  dutyratio = DUTYRATIO;
 
   // --------------------------------------------------------------------------------------------------------
   // Timer 0 settings
@@ -68,7 +70,7 @@ void setup() {
 
   ICR1 = PERIOD;
   OCR1A = DUTYRATIO;                    // Default Timer 1A duty cycle
-  OCR1B = PERIOD-DUTYRATIO;                         // Default Timer 1B duty cycle
+  OCR1B = PERIOD - DUTYRATIO;           // Default Timer 1B duty cycle
 
   TIMSK1 = 0;                           // Reset Timer 1 interrupt mask register
   TIFR1 = 0;                            // Reset Timer 1 interrupt flag register
@@ -110,20 +112,47 @@ void setup() {
 ISR(TIMER0_COMPA_vect) {
   PORTD &= ~(1 << PORTD2); // Computational load indicator: low
 
-  switchstate = PINB;
+  switchstate[4] = switchstate[3];
+  switchstate[3] = switchstate[2];
+  switchstate[2] = switchstate[1];
+  switchstate[1] = switchstate[0];
+  switchstate[0] = PINB;
   //   PWM off by 180V_SW
-  if (CHECKBIT(switchstate, 0)) {// If 180V_SW high, stop pwm
-    PORTD |= (1 << PORTD4);      // Red Light on
+  if (CHECKBIT(switchstate[0], 0)) {// If 180V_SW high, stop pwm
+    PORTD |= (1 << PORTD4);      // Red Light off
     DDRB &= ~(1 << DDB1) &       // PWM1A Output 0 ("180-AC" port)
             ~(1 << DDB2) ;       // PWM1B Output 0 ("180-AC" port)
     Run_state = 0;
     runDC = 0;
+    dutyratio = DUTYRATIO_MIN;
+    OCR1A = dutyratio;
+    OCR1B = PERIOD - dutyratio;
   } else if (Run_state == 0) {   // If 180V_SW low and idle status, start pwm
-    PORTD &= ~(1 << PORTD4);     // Red Light off
+    PORTD &= ~(1 << PORTD4);     // Red Light on
     DDRB  |= (1 << DDB1) |       // Timer 1A Pin set as output
              (1 << DDB2) ;       // Timer 1B Pin set as output
     Run_state = 1;
     runDC = 1;
+  }
+
+  // PWM tuning by 120V_SW
+  if (runDC) {
+    unsigned int status_40 = CHECKBIT(switchstate[0], 4);
+    unsigned int status_41 = CHECKBIT(switchstate[1], 4);
+    unsigned int status_42 = CHECKBIT(switchstate[2], 4);
+    unsigned int status_43 = CHECKBIT(switchstate[3], 4);
+    unsigned int status_44 = CHECKBIT(switchstate[4], 4);
+    if ((status_40 ^ status_41) && (status_41 == status_42) && (status_41 == status_43) && (status_41 == status_44)) {
+      if (dutyratio + CLIMB_STEP > DUTYRATIO_MAX) {
+        climb = DECREASING;
+      }
+      else if (dutyratio - CLIMB_STEP < DUTYRATIO_MIN) {
+        climb = INCREASING;
+      }
+      dutyratio += climb * CLIMB_STEP;
+      OCR1A = dutyratio;
+      OCR1B = PERIOD - dutyratio;
+    }
   }
 
   PORTD |= (1 << PORTD2); // Computational load indicator: high

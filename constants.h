@@ -12,12 +12,18 @@
 //PWM related
 unsigned int runDC;
 #define DEADTIME    8
-#define PERIOD      160   // 25kHz:320; 20kHz:400
-#define DUTYRATIO   50
+#define PERIOD      400   // 25kHz:320; 20kHz:400
+#define DUTYRATIO   10
 #define MAXTIMECOUNTDC 2000
-
+unsigned int dutyratio;
+#define DUTYRATIO_MAX  180
+#define DUTYRATIO_MIN  20
 // State machine and protection related
 #define TRUE 1
 #define FALSE 0
-unsigned char switchstate;
+unsigned char switchstate[5];
 unsigned int Run_state;
+int climb;
+#define INCREASING 3
+#define DECREASING -1
+#define CLIMB_STEP 4
