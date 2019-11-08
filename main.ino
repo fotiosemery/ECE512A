@@ -1,11 +1,11 @@
-// This file lists the code for generating a basic PWM on Timer 0 and 1
-// Filename: Timer1.ino
-// Date updated: Spring-2016
-// Version 1.0
+ // This file is for ECE 512 Fall-2019 LAB 9, 10 to generate SPWM with timer 2
+ // Date updated: Fall-2019
+ // Version 1.0
 
 #include <avr/io.h>
 #include <avr/io.h>
 #include "constants.h"
+#include "sinetable256.h"    // sinetable with 256 entries 
 
 // ======================================================================================================
 // Initialize
@@ -23,11 +23,13 @@ void setup() {
   //  ------------------------------------------------------------------------------------------------------
   Run_state = 0;
   runDC = 0;
+  runAC = 0;
   climb = 1;
-  dutyratio = DUTYRATIO;
+  dutyratio = DUTYRATIO_MIN;
+  PointerSPWM = 0;//////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------------------------------------
-  // Timer 0 settings
+  // Timer 0 settings: There are no changes in this section
   // --------------------------------------------------------------------------------------------------------
   TCCR0A = 0;                           // Reset Timer 0 Control Register A
   TCCR0B = 0;                           // Reset Timer 0 Control Register B
@@ -52,7 +54,7 @@ void setup() {
   // --------------------------------------------------------------------------------------------------------
 
   // --------------------------------------------------------------------------------------------------------
-  // Timer 1 settings
+  // Timer 1 settings //No changes in this part, dc/dc converter PWM 
   // --------------------------------------------------------------------------------------------------------
   TCCR1A = 0;                           // Reset Timer 1 Control Register A
   TCCR1B = 0;                           // Reset Timer 1 Control Register B
@@ -78,7 +80,35 @@ void setup() {
   // --------------------------------------------------------------------------------------------------------
 
   // --------------------------------------------------------------------------------------------------------
-  // IO settings
+  // Timer 2 settings (((((New part for 60 Hz SPWM generation))))
+  // --------------------------------------------------------------------------------------------------------
+  TCCR2A = 0;                           // Reset Timer 2 Control Register A
+  TCCR2B = 0;                           // Reset Timer 2 Control Register B
+  TCCR2A |= (1 << COM1A1) |             // Clear OC2A on compare match up counting, Set on down counting
+            (0 << COM1A0) |
+            (1 << COM1B1) |             // Set OC2B on compare match up counting, Clear on down counting
+            (1 << COM1B0) |
+            (1 << WGM10)  |             // Phase correct mode, 8-bit TOP = 0xFF
+            (0 << WGM11)  ;
+  TCCR2B |= (0 << WGM12)  |
+            (0 << CS12)   |             // Prescalar N = 1, clock frequency = 16MHz
+            (0 << CS11)   |
+            (1 << CS10)   ;
+
+  OCR2A = DUTYRATIO - DEADTIME;         // Default Timer 2A duty cycle
+  OCR2B = 0xFF - OCR1A;                 // Default Timer 2B duty cycle
+
+  TIMSK2 = 0;                           // Reset Timer 2 interrupt mask register
+  TIFR2 = 0;                            // Reset Timer 2 interrupt flag register
+  TCNT2 = 0x00;                         // Set Timer 2 counter to 0
+  // --------------------------------------------------------------------------------------------------------
+  
+  ASSR = 0; // Reset Async status register, TIMER2 clk = CPU clk
+  // This ia new part (((())))
+
+  
+  // --------------------------------------------------------------------------------------------------------
+  // IO settings (((No change))))
   // --------------------------------------------------------------------------------------------------------
   SREG = 0x00;                // Reset AVR status
   SREG |= (1 << 7) ;          // Enable global Interrupt
@@ -111,50 +141,70 @@ void setup() {
 // ======================================================================================================
 ISR(TIMER0_COMPA_vect) {
   PORTD &= ~(1 << PORTD2); // Computational load indicator: low
-
+  
   switchstate[4] = switchstate[3];
   switchstate[3] = switchstate[2];
   switchstate[2] = switchstate[1];
   switchstate[1] = switchstate[0];
   switchstate[0] = PINB;
+
+  
   //   PWM off by 180V_SW
   if (CHECKBIT(switchstate[0], 0)) {// If 180V_SW high, stop pwm
     PORTD |= (1 << PORTD4);      // Red Light off
-    DDRB &= ~(1 << DDB1) &       // PWM1A Output 0 ("180-AC" port)
-            ~(1 << DDB2) ;       // PWM1B Output 0 ("180-AC" port)
+    DDRB &= ~(1 << DDB3) ;      // PWM2A Output 0 ("test" port)
+    DDRD &= ~(1 << DDD3) ;      // PWM2B Output 0 ("test" port)
     Run_state = 0;
-    runDC = 0;
-    dutyratio = DUTYRATIO_MIN;
-    OCR1A = dutyratio;
-    OCR1B = PERIOD - dutyratio;
+    runAC = 0;                  // runAC = 0 means that 180V_SW is turned off
+    PointerSPWM = 0;
   } else if (Run_state == 0) {   // If 180V_SW low and idle status, start pwm
     PORTD &= ~(1 << PORTD4);     // Red Light on
-    DDRB  |= (1 << DDB1) |       // Timer 1A Pin set as output
-             (1 << DDB2) ;       // Timer 1B Pin set as output
+    DDRB  |= (1 << DDB3) ;       // Timer 2A Pin set as output
+    DDRD  |= (1 << DDD3) ;       // Timer 2B Pin set as output
     Run_state = 1;
-    runDC = 1;
+    runAC = 1;                   // runAC = 1 means that 180V_SW is turned on
   }
 
-  // PWM tuning by 120V_SW
-  if (runDC) {
+// PWM tuning by 120V_SW Now it is for the dc/dc converter
+  if (runAC){
     unsigned int status_40 = CHECKBIT(switchstate[0], 4);
     unsigned int status_41 = CHECKBIT(switchstate[1], 4);
     unsigned int status_42 = CHECKBIT(switchstate[2], 4);
     unsigned int status_43 = CHECKBIT(switchstate[3], 4);
     unsigned int status_44 = CHECKBIT(switchstate[4], 4);
-    if ((status_40 ^ status_41) && (status_41 == status_42) && (status_41 == status_43) && (status_41 == status_44)) {
-      if (dutyratio + CLIMB_STEP > DUTYRATIO_MAX) {
+    if ((status_40 ^ status_41) && (status_41==status_42) && (status_41==status_43) && (status_41==status_44)){
+      if (dutyratio + CLIMB_STEP > DUTYRATIO_MAX){
         climb = DECREASING;
       }
-      else if (dutyratio - CLIMB_STEP < DUTYRATIO_MIN) {
+      else if (dutyratio - CLIMB_STEP < DUTYRATIO_MIN){
         climb = INCREASING;
-      }
-      dutyratio += climb * CLIMB_STEP;
-      OCR1A = dutyratio;
-      OCR1B = PERIOD - dutyratio;
+      }      
+      dutyratio += climb*CLIMB_STEP;      
+      
     }
   }
 
+    
+  //   Sine Wave update
+  if (runAC == 1) {
+    outSPWM = 0.1*dutyratio*(sinetable256[PointerSPWM])+(1-0.1*dutyratio)*AMPSPWM;
+    if (outSPWM > MAXSPWM) {
+      outSPWM = MAXSPWM;
+    }
+    else if (outSPWM < MINSPWM) {
+      outSPWM = MINSPWM;
+    }
+    OCR2A = outSPWM - DEADTIME;
+    OCR2B = outSPWM + DEADTIME;
+    PointerSPWM += POINTERSTEP;
+    if (PointerSPWM > LENGTHSPWM) {
+      PointerSPWM = 0;
+    }
+  }
+
+
+
+      
   PORTD |= (1 << PORTD2); // Computational load indicator: high
 }
 
