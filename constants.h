@@ -15,8 +15,8 @@ unsigned int runDC;
 #define DUTYRATIO   10
 #define MAXTIMECOUNTDC 2000
 unsigned int dutyratio;       // This variable can be changed to modulation index
-#define DUTYRATIO_MAX  5      // This constant can be changed to MODULATION_INDEX_MAX
-#define DUTYRATIO_MIN  0      // this constrant can be changed to MODULATION_INDEX_MIN
+#define DUTYRATIO_MAX  180      // This constant can be changed to MODULATION_INDEX_MAX
+#define DUTYRATIO_MIN  20      // this constrant can be changed to MODULATION_INDEX_MIN
 
 //Sine Wave related     this is for SPWM at timer2
 unsigned int runAC;
@@ -36,6 +36,6 @@ int outSPWM;
 unsigned char switchstate[5];
 unsigned int Run_state;
 int climb;
-#define INCREASING 1
+#define INCREASING 3
 #define DECREASING -1
-#define CLIMB_STEP 1
+#define CLIMB_STEP 4

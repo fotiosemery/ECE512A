@@ -155,18 +155,20 @@ ISR(TIMER0_COMPA_vect) {
     DDRB &= ~(1 << DDB3) ;      // PWM2A Output 0 ("test" port)
     DDRD &= ~(1 << DDD3) ;      // PWM2B Output 0 ("test" port)
     Run_state = 0;
-    runAC = 0;                  // runAC = 0 means that 180V_SW is turned off
-    PointerSPWM = 0;
+    runDC = 0; // runAC = 0 means that 180V_SW is turned off
+    runAC = 0;
+-    PointerSPWM = 0;
   } else if (Run_state == 0) {   // If 180V_SW low and idle status, start pwm
     PORTD &= ~(1 << PORTD4);     // Red Light on
     DDRB  |= (1 << DDB3) ;       // Timer 2A Pin set as output
     DDRD  |= (1 << DDD3) ;       // Timer 2B Pin set as output
     Run_state = 1;
-    runAC = 1;                   // runAC = 1 means that 180V_SW is turned on
+    runDC = 1; 
+    runAC = 1; // runDC = 1 means that 180V_SW is turned on
   }
 
 // PWM tuning by 120V_SW Now it is for the dc/dc converter
-  if (runAC){
+  if (runDC){
     unsigned int status_40 = CHECKBIT(switchstate[0], 4);
     unsigned int status_41 = CHECKBIT(switchstate[1], 4);
     unsigned int status_42 = CHECKBIT(switchstate[2], 4);
@@ -179,7 +181,9 @@ ISR(TIMER0_COMPA_vect) {
       else if (dutyratio - CLIMB_STEP < DUTYRATIO_MIN){
         climb = INCREASING;
       }      
-      dutyratio += climb*CLIMB_STEP;      
+      dutyratio += climb*CLIMB_STEP;
+      OCR1A = dutyratio;
+      OCR1B = PERIOD - dutyratio;      
       
     }
   }
@@ -187,7 +191,7 @@ ISR(TIMER0_COMPA_vect) {
     
   //   Sine Wave update
   if (runAC == 1) {
-    outSPWM = 0.1*dutyratio*(sinetable256[PointerSPWM])+(1-0.1*dutyratio)*AMPSPWM;
+    outSPWM = 0.9*(sinetable256[PointerSPWM])+(1-0.9)*AMPSPWM;
     if (outSPWM > MAXSPWM) {
       outSPWM = MAXSPWM;
     }
