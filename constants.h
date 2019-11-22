@@ -12,7 +12,7 @@
 unsigned int runDC;
 #define DEADTIME    8
 #define PERIOD      400   // 25kHz:320; 20kHz:400
-#define DUTYRATIO   10
+#define DUTYRATIO   176
 #define MAXTIMECOUNTDC 2000
 unsigned int dutyratio;       // This variable can be changed to modulation index
 #define DUTYRATIO_MAX  180      // This constant can be changed to MODULATION_INDEX_MAX
