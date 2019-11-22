@@ -1,4 +1,4 @@
- // This file is for ECE 512 Fall-2019 LAB 9, 10 to generate SPWM with timer 2
+// This file is for ECE 512 Fall-2019 LAB 9, 10 to generate SPWM with timer 2
  // Date updated: Fall-2019
  // Version 1.0
 
@@ -25,7 +25,7 @@ void setup() {
   runDC = 0;
   runAC = 0;
   climb = 1;
-  dutyratio = DUTYRATIO_MIN;
+  dutyratio = DUTYRATIO;
   PointerSPWM = 0;//////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ void setup() {
 
   ICR1 = PERIOD;
   OCR1A = DUTYRATIO;                    // Default Timer 1A duty cycle
-  OCR1B = PERIOD - DUTYRATIO;           // Default Timer 1B duty cycle
+  OCR1B = DUTYRATIO;           // Default Timer 1B duty cycle
 
   TIMSK1 = 0;                           // Reset Timer 1 interrupt mask register
   TIFR1 = 0;                            // Reset Timer 1 interrupt flag register
@@ -157,14 +157,14 @@ ISR(TIMER0_COMPA_vect) {
     Run_state = 0;
     runDC = 0; // runAC = 0 means that 180V_SW is turned off
     runAC = 0;
--    PointerSPWM = 0;
+   PointerSPWM = 0;
   } else if (Run_state == 0) {   // If 180V_SW low and idle status, start pwm
     PORTD &= ~(1 << PORTD4);     // Red Light on
     DDRB  |= (1 << DDB3) ;       // Timer 2A Pin set as output
     DDRD  |= (1 << DDD3) ;       // Timer 2B Pin set as output
     Run_state = 1;
     runDC = 1; 
-    runAC = 1; // runDC = 1 means that 180V_SW is turned on
+    runAC = 0; // runDC = 1 means that 180V_SW is turned on
   }
 
 // PWM tuning by 120V_SW Now it is for the dc/dc converter
@@ -183,7 +183,7 @@ ISR(TIMER0_COMPA_vect) {
       }      
       dutyratio += climb*CLIMB_STEP;
       OCR1A = dutyratio;
-      OCR1B = PERIOD - dutyratio;      
+      OCR1B = dutyratio;      
       
     }
   }
