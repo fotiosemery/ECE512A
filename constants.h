@@ -36,6 +36,6 @@ int outSPWM;
 unsigned char switchstate[5];
 unsigned int Run_state;
 int climb;
-#define INCREASING 3
+#define INCREASING 1
 #define DECREASING -1
 #define CLIMB_STEP 4
